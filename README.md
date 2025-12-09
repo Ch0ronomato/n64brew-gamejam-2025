@@ -1,5 +1,14 @@
 # N64 starting project
 
+
+## Requirements
+
+To build this project, you need
+- *git*
+- The *libdragon* toolchain
+- *SCons*
+
+
 ## Initialize
 
 This project is composed of git submodules.

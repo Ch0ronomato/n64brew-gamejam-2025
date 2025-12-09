@@ -103,7 +103,7 @@ env = SCons.Environment.Environment(
 
         # libdragon
         f'-L{N64_INST}/mips64-elf/lib',
-        #'-Llibdragon',
+        '-LLlibraries/libdragon',
 
         # Tiny3D
         '-Llibraries/tiny3d/build',
@@ -145,7 +145,7 @@ lib_flecs = [
 env.Command(
     target = lib_libdragon, 
     source = [],
-    action = Action(chdir = 'libraries/libdragon', act = f'make -j{jobs} libdragon.a')
+    action = Action(chdir = 'libraries/libdragon', act = f'make -j{jobs} all')
 )
 env.Command(
     target = lib_tiny3d, 
@@ -179,9 +179,9 @@ elf = env.Program(target=elf_target, source=build_sources)
 
 # N64 ROM creation tools
 n64_tools = {
-    'N64SYM'         : '/opt/libdragon/bin/n64sym',
-    'N64TOOL'        : '/opt/libdragon/bin/n64tool',
-    'N64ELFCOMPRESS' : '/opt/libdragon/bin/n64elfcompress'
+    'N64SYM'         : f'{N64_INST}/bin/n64sym',
+    'N64TOOL'        : f'{N64_INST}/bin/n64tool',
+    'N64ELFCOMPRESS' : f'{N64_INST}/bin/n64elfcompress'
 }
 
 # Custom builder for N64 ROM
@@ -233,7 +233,7 @@ rom_target = 'n64brew_gamejam.z64'
 rom = env.N64ROM(target=rom_target, source=elf)
 
 # Set up dependencies
-env.Depends(elf, lib_tiny3d + lib_flecs)
+env.Depends(elf, lib_libdragon + lib_tiny3d + lib_flecs)
 env.Depends(rom, elf)
 
 # Default target
