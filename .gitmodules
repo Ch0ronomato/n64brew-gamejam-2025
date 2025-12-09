@@ -1,0 +1,10 @@
+[submodule "libraries/libdragon"]
+	path = libraries/libdragon
+	url = https://github.com/DragonMinded/libdragon.git
+	branch = preview
+[submodule "libraries/tiny3d"]
+	path = libraries/tiny3d
+	url = https://github.com/HailToDodongo/tiny3d.git
+[submodule "libraries/flecs"]
+	path = libraries/flecs
+	url = https://github.com/SanderMertens/flecs.git

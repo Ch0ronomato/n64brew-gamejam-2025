@@ -1,0 +1,17 @@
+**/.DS_Store
+
+# SConstruct
+
+# for projects that use SCons for building: http://http://www.scons.org/
+.sconsign.dblite
+__pycache__/
+
+# When configure fails, SCons outputs these
+config.log
+.sconf_temp
+
+
+# Build output
+src/**/*.o
+build/
+*.z64
