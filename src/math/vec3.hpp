@@ -128,7 +128,7 @@ namespace jam
         }
 
         /// @brief Check if the vector is zero
-        inline bool is_zero() const { return x == 0.0f and y == 0.0f and z == 0.0f; }
+        inline bool is_zero() const { return x == 0.f and y == 0.f and z == 0.f; }
 
         /// @brief Access element by index
         inline real operator[](uint index) const { return coords[index]; }
@@ -149,7 +149,7 @@ namespace jam
         inline Vec3 & normalize()
         {
             const real magsqr = mag_sqr();
-            if (magsqr > 0.0f)
+            if (magsqr > 0.f)
             {
                 const real s = 1.0f / sqrt(magsqr);
                 x *= s;
@@ -162,6 +162,7 @@ namespace jam
         /// @brief Normalize the vector
         inline Vec3 normal()
         {
+            // Copy then normalize
             Vec3 n = *this;
             n.normalize();
             return n;
@@ -231,7 +232,7 @@ namespace jam
         /// @brief Check if the angle between two vectors is acute
         static inline bool acute(const Vec3 & a, const Vec3 & b)
         {
-            return a.dot(b) > 0.0f;
+            return a.dot(b) > 0.f;
         }
 
         /// @brief Check if the angle between two vectors is orthogonal
@@ -243,7 +244,40 @@ namespace jam
         /// @brief Check if the angle between two vectors is obtuse
         static inline bool obtuse(const Vec3 & a, const Vec3 & b)
         {
-            return a.dot(b) < 0.0f;
+            return a.dot(b) < 0.f;
+        }
+
+
+        // MARK: Interpolations
+
+        /// @brief Linear interpolation between two vectors
+        static inline Vec3 lerp(const Vec3 & a, const Vec3 & b, real t)
+        {
+            const real i = 1.f - t;
+            return Vec3(
+                a.x * i + b.x * t,
+                a.y * i + b.y * t,
+                a.z * i + b.z * t
+            );
+        }
+
+        /// @brief Normalized spherical linear interpolation between two vectors
+        /// @note Both input vectors must be normalized
+        static inline Vec3 normal_slerp(const Vec3 & a, const Vec3 & b, real t)
+        {
+            // Precompute factors
+            const real
+                angle = Vec3::angle(a, b),
+                s     = 1.f / sin(angle),
+                s0    = sin(angle * (1.f - t)),
+                s1    = sin(angle * t);
+
+            // Return the interpolated vector
+            return Vec3(
+                (a.x * s0 + b.x * s1) * s,
+                (a.y * s0 + b.y * s1) * s,
+                (a.z * s0 + b.z * s1) * s
+            );
         }
     };
 }
