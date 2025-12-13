@@ -1,12 +1,48 @@
 #pragma once
 
+/**
+ * @file bezier.hpp
+ * @brief Define a Bezier curve utility class
+ * 
+ * BezierTrack allows to define a track as a chain of cubic Bezier curve segments.
+ * Each segment is defined by 4 control points, where the last point of each segment
+ * is the first point of the next segment. The class allows to retrieve interpolated
+ * points along the curve, including extra data such as normals and widths associated
+ * with each segment. 
+ * 
+ * Assuming we have a circuit defined as this:
+ * 
+ *       D2 -- A0 -- A1
+ *      /             \
+ *     D1              A2
+ *     |               |
+ *     D0              B0
+ *     |               |
+ *     C2              B1
+ *      \             /
+ *       C1 -- C0 -- B2
+ * 
+ * Then we have 4 segments: A, B, C, D
+ * Each segment has 4 control points:
+ * - Segment A: A0, A1, A2, B0
+ * - Segment B: B0, B1, B2, C0
+ * - Segment C: C0, C1, C2, D0
+ * - Segment D: D0, D1, D2, A0
+ * 
+ * The last control point of segment D (A0) is a duplicate of the first control point
+ * of segment A to allow proper looping.
+ * 
+ * And for each segment, we have an associated segment data which define 
+ * the normal and the width at the beginning of the segment.
+ */
+
 #include <math.h>
 #include "math/vec3.hpp"
 #include "collection.hpp"
 
 namespace jam
 {
-    class Bezier;
+    class BezierTrack;
 
     /// @brief Define data specific to a Bezier curve segment point
     struct SegmentData
@@ -40,7 +76,7 @@ namespace jam
     /// @brief Define a point structure for Bezier curve points
     struct Point
     {
-        friend class Bezier;
+        friend class BezierTrack;
 
     public:
         /// @brief Position of the point in 3D space
@@ -61,7 +97,7 @@ namespace jam
 
 
     /// @brief Define a Bezier curve utility class
-    class Bezier
+    class BezierTrack
     {
     protected:
         /// @brief List of control points defining the Bezier curve
@@ -78,13 +114,13 @@ namespace jam
     public:
         /// @brief Create a Bezier curve by specifying the number of segments
         /// @param segments_ Number of segments to allocate
-        inline Bezier(uint segments_):
+        inline BezierTrack(uint segments_):
             control_points(segments_ * 3 + 1),
             segments_data(segments_ + 1)
         {}
 
         /// @brief Default destructor
-        inline ~Bezier() = default;
+        inline ~BezierTrack() = default;
 
         /// @brief Get the number of segments in the Bezier curve
         inline uint segment_count() const { return segments_data.len() - 1; }

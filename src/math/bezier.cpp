@@ -4,7 +4,7 @@
 using namespace jam;
 
 
-Point Bezier::get_point(uint seg_idx, real t) const
+Point BezierTrack::get_point(uint seg_idx, real t) const
 {
     // Figure out where to read control points from
     const uint   idx = seg_idx * 3;
