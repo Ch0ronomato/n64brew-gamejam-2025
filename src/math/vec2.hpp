@@ -37,6 +37,18 @@ namespace jam
         /// @brief Default destructor
         ~Vec2() = default;
 
+        /// @brief Return a vector with all components set to negative infinity
+        static inline const Vec2 inf_neg()
+        {
+            return Vec2(INF_NEG, INF_NEG);
+        }
+
+        /// @brief Return a vector with all components set to negative infinity
+        static inline const Vec2 inf_pos()
+        {
+            return Vec2(INF_POS, INF_POS);
+        }
+
 
         // MARK: Operators
 
@@ -135,7 +147,7 @@ namespace jam
         inline real mag() const { return sqrt(mag_sqr()); }
 
         /// @brief Normalize the vector
-        inline Vec2 & normalize()
+        Vec2 & normalize()
         {
             const real magsqr = mag_sqr();
             if (magsqr > 0.f)
@@ -157,7 +169,7 @@ namespace jam
 
         /// @brief Return the projection of this vector onto another vector
         /// @note Resulting vector will be colinear to 'other'
-        inline Vec2 projected_onto(const Vec2 & other)
+        Vec2 projected_onto(const Vec2 & other)
         {
             return other * (dot(other) / other.mag_sqr());
         }
@@ -170,7 +182,7 @@ namespace jam
         }
 
         /// @brief Reflect this vector around a normal vector
-        inline Vec2 reflected(const Vec2 & normal) const
+        Vec2 reflected(const Vec2 & normal) const
         {
             return *this - normal * (2.0f * this->dot(normal));
         }
@@ -179,7 +191,7 @@ namespace jam
         // MARK: Comparison
 
         /// Check if the two vectors are approximately equal
-        static inline bool approx_equal(const Vec2 & a, const Vec2 & b, real epsilon = EPSILON)
+        static bool approx_equal(const Vec2 & a, const Vec2 & b, real epsilon = EPSILON)
         {
             return jam::approx_equal(a.x, b.x, epsilon) and
                    jam::approx_equal(a.y, b.y, epsilon);
@@ -210,25 +222,25 @@ namespace jam
         }
 
         /// @brief Compute the angle between two vectors in radians
-        static inline real angle(const Vec2 & a, const Vec2 & b)
+        static real angle(const Vec2 & a, const Vec2 & b)
         {
             return atan2(a.cross(b), a.dot(b));
         }
 
         /// @brief Check if the angle between two vectors is acute
-        static inline bool acute(const Vec2 & a, const Vec2 & b)
+        static bool acute(const Vec2 & a, const Vec2 & b)
         {
             return a.dot(b) > 0.f;
         }
 
         /// @brief Check if the angle between two vectors is orthogonal
-        static inline bool orthogonal(const Vec2 & a, const Vec2 & b)
+        static bool orthogonal(const Vec2 & a, const Vec2 & b)
         {
             return abs(a.dot(b)) <= EPSILON;
         }
 
         /// @brief Check if the angle between two vectors is obtuse
-        static inline bool obtuse(const Vec2 & a, const Vec2 & b)
+        static bool obtuse(const Vec2 & a, const Vec2 & b)
         {
             return a.dot(b) < 0.f;
         }
@@ -237,7 +249,7 @@ namespace jam
         // MARK: Interpolations
 
         /// @brief Linear interpolation between two vectors
-        static inline Vec2 lerp(const Vec2 & a, const Vec2 & b, real t)
+        static Vec2 lerp(const Vec2 & a, const Vec2 & b, real t)
         {
             const real i = 1.f - t;
             return Vec2(
@@ -248,7 +260,7 @@ namespace jam
 
         /// @brief Normalized spherical linear interpolation between two vectors
         /// @note Both input vectors must be normalized
-        static inline Vec2 normal_slerp(const Vec2 & a, const Vec2 & b, real t)
+        static Vec2 normal_slerp(const Vec2 & a, const Vec2 & b, real t)
         {
             // Precompute factors
             const real

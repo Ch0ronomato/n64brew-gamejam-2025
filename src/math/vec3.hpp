@@ -39,6 +39,18 @@ namespace jam
         /// @brief Default destructor
         ~Vec3() = default;
 
+        /// @brief Return a vector with all components set to negative infinity
+        static inline const Vec3 inf_neg()
+        {
+            return Vec3(INF_NEG, INF_NEG, INF_NEG);
+        }
+
+        /// @brief Return a vector with all components set to negative infinity
+        static inline const Vec3 inf_pos()
+        {
+            return Vec3(INF_POS, INF_POS, INF_POS);
+        }
+
 
         // MARK: Operators
 
@@ -112,7 +124,7 @@ namespace jam
 
         /// @brief Cross product operator
         /// @note Resulting vector is orthogonal to both input vectors
-        inline Vec3 cross(const Vec3 & other) const
+        Vec3 cross(const Vec3 & other) const
         {
             return Vec3(
                 y * other.z - z * other.y,
@@ -146,7 +158,7 @@ namespace jam
         inline real mag() const { return sqrt(mag_sqr()); }
 
         /// @brief Normalize the vector
-        inline Vec3 & normalize()
+        Vec3 & normalize()
         {
             const real magsqr = mag_sqr();
             if (magsqr > 0.f)
@@ -170,7 +182,7 @@ namespace jam
 
         /// @brief Return the projection of this vector onto another vector
         /// @note Resulting vector will be colinear to 'other'
-        inline Vec3 projected_onto(const Vec3 & other)
+        Vec3 projected_onto(const Vec3 & other)
         {
             return other * (dot(other) / other.mag_sqr());
         }
@@ -183,7 +195,7 @@ namespace jam
         }
 
         /// @brief Reflect this vector around a normal vector
-        inline Vec3 reflected(const Vec3 & normal) const
+        Vec3 reflected(const Vec3 & normal) const
         {
             return *this - normal * (2.0f * this->dot(normal));
         }
@@ -192,7 +204,7 @@ namespace jam
         // MARK: Comparison
 
         /// Check if the two vectors are approximately equal
-        static inline bool approx_equal(const Vec3 & a, const Vec3 & b, real epsilon = EPSILON)
+        static bool approx_equal(const Vec3 & a, const Vec3 & b, real epsilon = EPSILON)
         {
             return jam::approx_equal(a.x, b.x, epsilon) and
                    jam::approx_equal(a.y, b.y, epsilon) and
@@ -224,25 +236,25 @@ namespace jam
         }
 
         /// @brief Compute the angle between two vectors in radians
-        static inline real angle(const Vec3 & a, const Vec3 & b)
+        static real angle(const Vec3 & a, const Vec3 & b)
         {
             return atan2(a.cross(b).mag(), a.dot(b));
         }
 
         /// @brief Check if the angle between two vectors is acute
-        static inline bool acute(const Vec3 & a, const Vec3 & b)
+        static bool acute(const Vec3 & a, const Vec3 & b)
         {
             return a.dot(b) > 0.f;
         }
 
         /// @brief Check if the angle between two vectors is orthogonal
-        static inline bool orthogonal(const Vec3 & a, const Vec3 & b)
+        static bool orthogonal(const Vec3 & a, const Vec3 & b)
         {
             return abs(a.dot(b)) <= EPSILON;
         }
 
         /// @brief Check if the angle between two vectors is obtuse
-        static inline bool obtuse(const Vec3 & a, const Vec3 & b)
+        static bool obtuse(const Vec3 & a, const Vec3 & b)
         {
             return a.dot(b) < 0.f;
         }
@@ -251,7 +263,7 @@ namespace jam
         // MARK: Interpolations
 
         /// @brief Linear interpolation between two vectors
-        static inline Vec3 lerp(const Vec3 & a, const Vec3 & b, real t)
+        static Vec3 lerp(const Vec3 & a, const Vec3 & b, real t)
         {
             const real i = 1.f - t;
             return Vec3(
@@ -263,7 +275,7 @@ namespace jam
 
         /// @brief Normalized spherical linear interpolation between two vectors
         /// @note Both input vectors must be normalized
-        static inline Vec3 normal_slerp(const Vec3 & a, const Vec3 & b, real t)
+        static Vec3 normal_slerp(const Vec3 & a, const Vec3 & b, real t)
         {
             // Precompute factors
             const real

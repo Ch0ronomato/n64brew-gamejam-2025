@@ -34,10 +34,16 @@
  * 
  * And for each segment, we have an associated segment data which define 
  * the normal and the width at the beginning of the segment.
+ * 
+ * references:
+ * - https://en.wikipedia.org/wiki/B%C3%A9zier_curve
+ * - https://youtu.be/aVwxzDHniEw
  */
 
 #include <math.h>
+#include "math/base.hpp"
 #include "math/vec3.hpp"
+#include "math/aabb.hpp"
 #include "collection.hpp"
 
 namespace jam
@@ -54,6 +60,11 @@ namespace jam
         /// @brief Width at the control point
         real width;
 
+    protected:
+        /// @brief AABB enclosing the segment 
+        AABB aabb = AABB::invalid();
+
+    public:
         /// @brief Default constructor
         inline SegmentData(): normal(0.f, 1.f, 0.f), width(1.f)
         {}
