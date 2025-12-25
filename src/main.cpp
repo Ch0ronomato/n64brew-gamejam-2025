@@ -101,6 +101,66 @@ int main(void) {
   auto orderColor = RGBA32(0xFF, 0xFF, 0xFF, 0x00);
   bool run = false;
   while (true) {
+    joypad_poll();
+    auto pressed = joypad_get_buttons_pressed(JOYPAD_PORT_1);
+    run = pressed.a ? !run : run;
+    if (run) {
+      t += 1; 
+      if (t >= 100) {
+        idx++;
+        t = 0;
+        if (idx == bezierTrack.segment_count()) {
+          idx = 0;
+        }
+      }
+    }
+
+    t3d_viewport_set_projection(&viewport, T3D_DEG_TO_RAD(65.f), 10.0f,
+                                5000.0f);
+    t3d_viewport_look_at(&viewport, &cameraPos, &origin, &yUp);
+
+    rdpq_attach(display_get(), display_get_zbuf());
+    t3d_frame_start();
+    t3d_viewport_attach(&viewport);
+
+    t3d_screen_clear_color(RGBA32(254, 254, 254, 0xFF));
+    t3d_screen_clear_depth();
+
+    t3d_light_set_ambient(color_ambient);
+    t3d_light_set_directional(0, &light_dir_color.r, &light_dir_vec);
+    t3d_light_set_count(1);
+
+    rdpq_set_prim_color(RGBA32(0xFF, 0xFF, 0xFF, 0xFF));
+
+    jam::Point nextStop = bezierTrack.get_point(idx, t / 100.f);
+    jam::Vec3 corrected = nextStop.position * 64.f;
+
+    T3DModelIter it = t3d_model_iter_create(track, T3D_CHUNK_TYPE_OBJECT);
+    // First point is normal (black primative)
+    // Second point is green (Teal primative)
+    // Third color is yellow (white primative)
+    while (t3d_model_iter_next(&it)) {
+      T3DModelState state = t3d_model_state_create();
+      if (strcmp(it.object->name, "Sphere") == 0) {
+        it.object->material->setColorFlags &= 0b110;
+        t3d_mat4fp_from_srt_euler(loc[0], (float[3]){1.f, 1.f, 1.f},
+                                  (float[3]){0.f, 0.f, 0.f}, corrected.coords);
+        rdpq_set_prim_color(RGBA32(orderColor.r, 0x00, 0x00, orderColor.a));
+        t3d_matrix_push(loc[0]);
+        t3d_model_draw_material(it.object->material, &state);
+        t3d_model_draw_object(it.object, NULL);
+        t3d_matrix_pop(1);
+      } else {
+        t3d_model_draw_material(it.object->material, &state);
+        t3d_model_draw_object(it.object, NULL);
+      }
+    }
+
+    rdpq_sync_pipe();
+
+    rdpq_text_printf(NULL, 1, 30, 60,
+                     "1 - Teal\n2 - Green\n3 - Blue\n4 - Purple");
+    rdpq_detach_show();
   }
 
   rdpq_close();

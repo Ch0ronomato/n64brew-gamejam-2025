@@ -1,8 +1,9 @@
 #include "math/bezier.hpp"
+#include "bezier.hpp"
 #include "math/interpolate.hpp"
+#include <libdragon.h>
 
 using namespace jam;
-
 
 Point BezierTrack::get_point(uint seg_idx, real t) const
 {
@@ -33,16 +34,37 @@ Point BezierTrack::get_point(uint seg_idx, real t) const
     // Compute the interpolated point
     // We reimplement the bezier_cubic here to avoid extra copies
     Vec3 pos;
-    for (uint i = 0; i < 3; ++i)
+    for (uint j = 0; j < 3; ++j)
     {
-        pos.coords[i] =
-            p0.coords[i] * (      i3    ) +
-            p1.coords[i] * (3.f * i2 * t) +
-            p2.coords[i] * (3.f * t2 * i) +
-            p3.coords[i] * (      t3    );
+        pos.coords[j] =
+            p0.coords[j] * (      i3    ) +
+            p1.coords[j] * (3.f * i2 * t) +
+            p2.coords[j] * (3.f * t2 * i) +
+            p3.coords[j] * (      t3    );
     }
     Vec3 normal = Vec3::lerp(s0.normal, s1.normal, t);
     real width  = jam ::lerp(s0.width , s1.width , t);
 
     return Point(pos, normal, width);
+}
+
+jam::BezierTrack *
+BezierTrack::from_blender_track_data(size_t numSegments,
+                                     std::vector<jam::Vec3> points,
+                                     std::vector<jam::Vec3> normals) {
+  jam::BezierTrack *ret = new jam::BezierTrack(numSegments);
+  assertf(ret->control_points.len() - 1 == points.size(),
+          "Mismatch size between containers: %d %d", ret->control_points.len(),
+          points.size());
+  for (size_t i = 0; i < points.size(); i++) {
+    ret->control_points[i] = points[i];
+  }
+
+  auto step = std::floor(normals.size() / points.size());
+  assertf(step > 1, "Invalid step %d, %d", normals.size(), points.size());
+  size_t i = 0;
+  for (auto j = 0; i < normals.size(); i += step, j++) {
+    ret->segments_data[j].normal = normals[i];
+  }
+  return ret;
 }
