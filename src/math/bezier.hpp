@@ -40,6 +40,7 @@
  * - https://youtu.be/aVwxzDHniEw
  */
 
+#include <iterator>
 #include <math.h>
 #include <vector>
 #include "math/base.hpp"
@@ -147,5 +148,26 @@ namespace jam
         static jam::BezierTrack * from_blender_track_data(size_t numSegments,
                                      std::vector<jam::Vec3> points,
                                      std::vector<jam::Vec3> normals);
+
+        struct Iterator {
+            using iterator_category = std::forward_iterator_tag;
+            using difference_type = unsigned short;
+
+            Iterator(BezierTrack* track) : trackData(track), p(10u) { }
+            Iterator(BezierTrack* track, unsigned short p_) : trackData(track), p(p_) { }
+            const Point operator*() const;
+            Iterator& operator++();
+            friend bool operator== (const Iterator& a, const Iterator& b) { return a.trackData == b.trackData && a.p == b.p; };
+            friend bool operator!= (const Iterator& a, const Iterator& b) { return !(a == b); };  
+
+        private:
+            BezierTrack* trackData;
+            // hundreds place is the segment id
+            // remainder is the current t value
+            unsigned short p;
+        };
+
+        Iterator begin() { return Iterator(this); }
+        Iterator end() { return Iterator(this, segment_count() * 100); }
     };
 }

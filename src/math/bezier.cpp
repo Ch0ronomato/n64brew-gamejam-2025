@@ -8,6 +8,7 @@ using namespace jam;
 Point BezierTrack::get_point(uint seg_idx, real t) const
 {
     // Figure out where to read control points from
+    debugf("Values %d %.4f\n", seg_idx, t);
     const uint   idx = seg_idx * 3;
     const Vec3 * ptr = control_points.raw();
 
@@ -42,7 +43,7 @@ Point BezierTrack::get_point(uint seg_idx, real t) const
             p2.coords[j] * (3.f * t2 * i) +
             p3.coords[j] * (      t3    );
     }
-    Vec3 normal = Vec3::lerp(s0.normal, s1.normal, t);
+    Vec3 normal = Vec3::lerp(s0.normal, s1.normal, t).normalize();
     real width  = jam ::lerp(s0.width , s1.width , t);
 
     return Point(pos, normal, width);
@@ -64,7 +65,24 @@ BezierTrack::from_blender_track_data(size_t numSegments,
   assertf(step > 1, "Invalid step %d, %d", normals.size(), points.size());
   size_t i = 0;
   for (auto j = 0; i < normals.size(); i += step, j++) {
-    ret->segments_data[j].normal = normals[i];
+    ret->segments_data[j].normal = normals[i].normalize();
   }
   return ret;
 }
+
+const jam::Point jam::BezierTrack::Iterator::operator*() const
+{
+  int segment_id = p / 100;
+  float t = (p - (segment_id * 100)) / 100.f;
+  return trackData->get_point(segment_id, t);
+}
+jam::BezierTrack::Iterator& jam::BezierTrack::Iterator::operator++() 
+{
+  p += 10;
+  // Have we passed the last segment?
+  if (p >= trackData->segment_count() * 100)
+  {
+    p = 0;
+  }
+  return *this;
+}  

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "math/base.hpp"
+#include <t3d/t3dmath.h>
 
 namespace jam
 {
@@ -290,6 +291,15 @@ namespace jam
                 (a.y * s0 + b.y * s1) * s,
                 (a.z * s0 + b.z * s1) * s
             );
+        }
+
+        explicit operator T3DVec3() const {
+          T3DVec3 ret;
+          ret.x = x;
+          ret.y = y;
+          ret.z = z;
+          ret *= 64.f;
+          return ret;
         }
     };
 }
