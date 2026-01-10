@@ -146,10 +146,12 @@ int main(void) {
     joypad_poll();
     auto pressed = joypad_get_buttons_held(JOYPAD_PORT_1);
     int xInput = joypad_get_axis_held(JOYPAD_PORT_1, JOYPAD_AXIS_STICK_X);
+    int yInput = joypad_get_axis_held(JOYPAD_PORT_1, JOYPAD_AXIS_STICK_Y);
 
     // Tick
     gamestate_page_t& gstate = gamestatebook_update(gameStateHistory);
-    gstate.lastInput = xInput;
+    gstate.lastXInput = xInput;
+    gstate.lastYInput = yInput;
     car_update(gameStateHistory, pressed);
     camera_update(gameStateHistory);
 
