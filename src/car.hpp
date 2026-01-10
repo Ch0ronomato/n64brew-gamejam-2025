@@ -6,5 +6,5 @@
 #include <t3d/t3dmodel.h>
 void car_init(jam::BezierTrack& track);
 void car_update(GameStateBook& gameStateHistory, joypad_buttons_t buttons);
-void car_render(T3DModelIter it, T3DModelState& state);
+void car_render(T3DModelState& state);
 

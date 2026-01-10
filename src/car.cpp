@@ -13,13 +13,20 @@ namespace
     (T3DMat4FP *)malloc_uncached(sizeof(T3DMat4FP)),
     (T3DMat4FP *)malloc_uncached(sizeof(T3DMat4FP))
   };
-  color_t orderColor {0xFF, 0xFF, 0xFF, 0x00};
+  color_t orderColor[4] {
+    {0xFF, 0x00, 0x00, 0xFF},
+    {0x00, 0xFF, 0x00, 0xFF},
+    {0x00, 0x00, 0xFF, 0xFF},
+    {0xFF, 0xFF, 0x00, 0xFF}
+  };
   T3DVec3 corrected {{0.f, 0.f, 0.f}};
   jam::Vec3 normal(0, 0, 0);
   jam::Vec3 currentTrackPoint(0, 0, 0);
   jam::Vec3 currentLocal(0, 0, 0);
   jam::Vec3 lastDirection(0.f, 0.f, 0.f);
   jam::BezierTrack::Iterator trackIter = nullptr;
+
+  T3DModel* carModel;
 }
 
 void print_vec(const char* name, const jam::Vec3& vec, bool buffer = false)
@@ -36,17 +43,26 @@ void car_init(jam::BezierTrack& track)
   currentTrackPoint = (*trackIter).position;
   currentLocal = (*trackIter).position;
   lastDirection = (currentTrackPoint - currentLocal).normalize();
+
+  carModel = t3d_model_load("rom://car.t3dm");
 }
 
 // @todo: We don't need base
-void car_render(T3DModelIter it, T3DModelState& state) {
-  it.object->material->setColorFlags &= 0b110;
-  t3d_mat4fp_from_srt_euler(loc[0], (float[3]){1.f, 1.f, 1.f},
+void car_render(T3DModelState& state) {
+  // it.object->material->setColorFlags &= 0b110;
+  t3d_mat4fp_from_srt_euler(loc[0], (float[3]){0.1f, 0.1f, 0.1f},
                             (float[3]){0.f, 0.f, 0.f}, corrected.v);
-  rdpq_set_prim_color(RGBA32(orderColor.r, 0x00, 0x00, orderColor.a));
   t3d_matrix_push(loc[0]);
-  t3d_model_draw_material(it.object->material, &state);
-  t3d_model_draw_object(it.object, NULL);
+  auto iter = t3d_model_iter_create(carModel, T3D_CHUNK_TYPE_OBJECT);
+  int32_t i = 0;
+  while (t3d_model_iter_next(&iter)) {
+    iter.object->material->setColorFlags &= 0b110; 
+    rdpq_set_prim_color(RGBA32(orderColor[i % 4].r, orderColor[i % 4].g, orderColor[i % 4].b, orderColor[i % 4].a));
+    t3d_model_draw_material(iter.object->material, &state);
+    t3d_model_draw_object(iter.object, NULL);
+    state = t3d_model_state_create();
+    i += 1;
+  }
   t3d_matrix_pop(1);
   
   // No normals

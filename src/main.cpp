@@ -10,7 +10,6 @@
 #include <t3d/t3dmodel.h>
 #include <t3d/t3dmath.h>
 #include <vector>
-#include <iterator>
 
 #include "math/vec3.hpp"
 #include "math/bezier.hpp"
@@ -37,7 +36,6 @@ void render_init() {
   // t3d
   t3d_init((T3DInitParams){0});
 
-
   // models
   track = t3d_model_load("rom://track.t3dm");
   assertf(track != nullptr, "Something went wrong");
@@ -46,11 +44,6 @@ void render_init() {
   viewport = t3d_viewport_create();
 
   t3d_vec3_norm(&light_dir_vec);
-
-  // Pulled these from blender. If you want the relevant python
-  // `mathutils.Matrix.decompose(C.scene.camera.matrix_world)[0].xzy * 64`
-  // T3DVec3 cameraPos = {312.9292297363281, 186.78846740722656,
-  //                      381.92987060546875};
 }
 
 jam::BezierTrack* track_init() {
@@ -181,13 +174,13 @@ int main(void) {
     T3DModelIter it = t3d_model_iter_create(track, T3D_CHUNK_TYPE_OBJECT);
     while (t3d_model_iter_next(&it)) {
       T3DModelState state = t3d_model_state_create();
-      if (strcmp(it.object->name, "Sphere") == 0) {
-        car_render(it, state);
-      } else {
+      if (strcmp(it.object->name, "Sphere") != 0) {
         t3d_model_draw_material(it.object->material, &state);
         t3d_model_draw_object(it.object, NULL);
       }
     }
+    T3DModelState state = t3d_model_state_create();
+    car_render(state);
 
     rdpq_sync_pipe();
     rdpq_detach_show();
