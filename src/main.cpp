@@ -11,13 +11,18 @@
 #include <t3d/t3dmath.h>
 #include <vector>
 
+#include "graphics.h"
 #include "math/vec3.hpp"
 #include "math/bezier.hpp"
+#include "rdpq_attach.h"
+#include "rdpq_text.h"
 #include "types.hpp"
 #include "car.hpp"
+#include "colors.hpp"
 
 namespace {
   T3DModel *track;
+  T3DModel *garage;
   T3DViewport viewport;
   uint8_t color_ambient[4] = {254, 254, 254, 0xFF};
   T3DVec3 light_dir_vec = {{0.f, 1.f, 0.f}};
@@ -25,8 +30,12 @@ namespace {
   T3DVec3 cameraPos = {2.92, 346.78, 106.92};
   T3DVec3 origin = {0, 0, 0};
   T3DVec3 yUp = {0.f, 1.f, 0.f};
-  // @todo: In reality, this needs to be some kind of radius `r` always "behind" the ball
   jam::Vec3 cameraDistance = {-2.f, -1.f, -2.f};
+  int currentBlock = 0;
+  color_t currentColors[8];
+  T3DQuat rotate;
+  T3DMat4FP* garageFP;
+  T3DMat4FP* scratchFP[numBlocks];
 }
 void render_init() {
   // debug font
@@ -40,10 +49,19 @@ void render_init() {
   track = t3d_model_load("rom://track.t3dm");
   assertf(track != nullptr, "Something went wrong");
 
+  garage = t3d_model_load("rom://garage.t3dm");
+  assertf(garage != nullptr, "Something went wrong");
+
   // viewport, lighting, camera
   viewport = t3d_viewport_create();
 
   t3d_vec3_norm(&light_dir_vec);
+  t3d_quat_identity(rotate);
+  garageFP = (T3DMat4FP*)malloc_uncached(sizeof(T3DMat4FP));
+  for (int i = 0; i < (int)numBlocks; i++) {
+    scratchFP[i] = (T3DMat4FP*)malloc_uncached(sizeof(T3DMat4FP));
+    currentColors[i] = COLORS[0];
+  }
 }
 
 jam::BezierTrack* track_init() {
@@ -114,8 +132,8 @@ void camera_update(GameStateBook& lastPoints) {
     }
 }
 
-gamestate_page_t& gamestatebook_update(GameStateBook& book) {
-  gamestate_page_t newPage {{0,0,0}, 0};
+gamestate_page_t& gamestatebook_update(GameStateBook& book, Phase phase) {
+  gamestate_page_t newPage {{0,0,0}, 0, 0, phase};
   book.push_back(newPage);
   if (book.size() > MAX_HISTORY)
   {
@@ -140,53 +158,130 @@ int main(void) {
   jam::BezierTrack bezierTrack = *track_init();
 
   // get our initial position for the camera
+  Phase currentPhase = Phase::GARAGE;
   GameStateBook gameStateHistory;
+  gamestatebook_update(gameStateHistory, currentPhase);
   car_init(bezierTrack);
+
   while (true) {
     joypad_poll();
-    auto pressed = joypad_get_buttons_held(JOYPAD_PORT_1);
+    auto held = joypad_get_buttons_held(JOYPAD_PORT_1);
+    auto pressed = joypad_get_buttons_pressed(JOYPAD_PORT_1);
     int xInput = joypad_get_axis_held(JOYPAD_PORT_1, JOYPAD_AXIS_STICK_X);
     int yInput = joypad_get_axis_held(JOYPAD_PORT_1, JOYPAD_AXIS_STICK_Y);
 
     // Tick
-    gamestate_page_t& gstate = gamestatebook_update(gameStateHistory);
+    gamestate_page_t& gstate = gamestatebook_update(gameStateHistory, currentPhase);
     gstate.lastXInput = xInput;
     gstate.lastYInput = yInput;
-    car_update(gameStateHistory, pressed);
-    camera_update(gameStateHistory);
+    car_update(gameStateHistory, held);
+    currentPhase = gameStateHistory.back().phase;
+    if (currentPhase == Phase::RACE) {
+      camera_update(gameStateHistory);
 
-    // Render
-    t3d_viewport_set_projection(&viewport, T3D_DEG_TO_RAD(65.f), 10.0f,
-                                5000.0f);
-    t3d_viewport_look_at(&viewport, &cameraPos, &origin, &yUp);
+      // Render
+      t3d_viewport_set_projection(&viewport, T3D_DEG_TO_RAD(65.f), 10.0f,
+                                  5000.0f);
+      t3d_viewport_look_at(&viewport, &cameraPos, &origin, &yUp);
 
-    rdpq_attach(display_get(), display_get_zbuf());
-    t3d_frame_start();
-    t3d_viewport_attach(&viewport);
+      rdpq_attach(display_get(), display_get_zbuf());
+      t3d_frame_start();
+      t3d_viewport_attach(&viewport);
 
-    t3d_screen_clear_color(RGBA32(254, 254, 254, 0xFF));
-    t3d_screen_clear_depth();
+      t3d_screen_clear_color(RGBA32(254, 254, 254, 0xFF));
+      t3d_screen_clear_depth();
 
-    t3d_light_set_ambient(color_ambient);
-    t3d_light_set_directional(0, &light_dir_color.r, &light_dir_vec);
-    t3d_light_set_count(1);
+      t3d_light_set_ambient(color_ambient);
+      t3d_light_set_directional(0, &light_dir_color.r, &light_dir_vec);
+      t3d_light_set_count(1);
 
-    rdpq_set_prim_color(RGBA32(0xFF, 0xFF, 0xFF, 0xFF));
+      rdpq_set_prim_color(RGBA32(0xFF, 0xFF, 0xFF, 0xFF));
 
-    T3DModelIter it = t3d_model_iter_create(track, T3D_CHUNK_TYPE_OBJECT);
-    while (t3d_model_iter_next(&it)) {
+      T3DModelIter it = t3d_model_iter_create(track, T3D_CHUNK_TYPE_OBJECT);
+      while (t3d_model_iter_next(&it)) {
+        T3DModelState state = t3d_model_state_create();
+        if (strcmp(it.object->name, "Sphere") != 0) {
+          t3d_model_draw_material(it.object->material, &state);
+          t3d_model_draw_object(it.object, NULL);
+        }
+      }
       T3DModelState state = t3d_model_state_create();
-      if (strcmp(it.object->name, "Sphere") != 0) {
-        t3d_model_draw_material(it.object->material, &state);
-        t3d_model_draw_object(it.object, NULL);
+      car_render(state);
+
+      rdpq_sync_pipe();
+      rdpq_detach_show();
+      origin = static_cast<T3DVec3>(gstate.lastPoint);
+    } else {
+      // Simple camera setup
+      T3DVec3 garageCamera {{1777.66357421875, -1.0989729166030884, 12.22758960723877}};
+      // Render
+      t3d_viewport_set_projection(&viewport, T3D_DEG_TO_RAD(65.f), 10.0f,
+                                  5000.0f);
+      t3d_viewport_look_at(&viewport, &garageCamera, &origin, &yUp);
+
+      rdpq_attach(display_get(), display_get_zbuf());
+      t3d_frame_start();
+      t3d_viewport_attach(&viewport);
+
+      t3d_screen_clear_color(RGBA32(200, 200, 200, 0xFF));
+      t3d_screen_clear_depth();
+
+      t3d_light_set_ambient(color_ambient);
+      t3d_light_set_directional(0, &light_dir_color.r, &light_dir_vec);
+      t3d_light_set_count(1);
+
+      t3d_quat_rotate_euler(rotate, (float[3]){0.f, 1.f, 0.f}, -0.1f);
+      t3d_mat4fp_from_srt(garageFP, (float[3]){1.f, 1.f, 1.f}, rotate.v, (float[3]){1.f, 1.f, 1.f});
+      t3d_matrix_push_pos(1);
+      for (int i = 0; i < (int)numBlocks; i++) {
+        rdpq_set_prim_color(currentColors[i]);
+        jam::Vec3 worldTranslation = translationsWorldSpace[i];
+        T3DVec3 t = static_cast<T3DVec3>(worldTranslation);
+        t3d_mat4fp_from_srt(scratchFP[i], 
+          (float[3]){1.f, 1.f, 1.f}, 
+          (float[4]){0.f, 0.f, 0.f, 0.f},
+          t.v);
+        t3d_matrix_set(scratchFP[i], true);
+        if (i == currentBlock) {
+          // Push the rotation matrix too
+          t3d_matrix_push_pos(1);
+          t3d_matrix_set(garageFP, true);
+        }
+        t3d_model_draw(garage);
+        if (i == currentBlock) {
+          // we need to pop the added matrix
+          t3d_matrix_pop(1);
+        }
+      }
+      t3d_matrix_pop(1); 
+      rdpq_sync_pipe();
+      rdpq_detach_show();
+      if (pressed.start) {
+        currentPhase = Phase::RACE;
+        continue;
+      }
+      if (pressed.c_left || pressed.c_right) {
+        currentBlock += pressed.c_left ? 1 : -1;
+      }
+      else if (pressed.c_down|| pressed.c_up) {
+        currentBlock += pressed.c_down? 1 : -1;
+      }
+      currentBlock = std::abs(currentBlock) % 8;
+      if (pressed.a) {
+        if (color_equals(currentColors[currentBlock], RGBA32(0x00, 0x00, 0x00, 0xFF))) {
+          currentColors[currentBlock] = COLORS[0];
+        }
+        else {
+          for (int i = 0; i < 4; i++) {
+            if (color_equals(currentColors[currentBlock], COLORS[i])) {
+              debugf("Set color %d\n", (i + 1) % 4);
+              currentColors[currentBlock] = COLORS[(i + 1) % 4];
+              break;
+            }
+          }
+        }
       }
     }
-    T3DModelState state = t3d_model_state_create();
-    car_render(state);
-
-    rdpq_sync_pipe();
-    rdpq_detach_show();
-    origin = static_cast<T3DVec3>(gstate.lastPoint);
   }
 
   rdpq_close();

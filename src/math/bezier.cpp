@@ -8,7 +8,6 @@ using namespace jam;
 Point BezierTrack::get_point(uint seg_idx, real t) const
 {
     // Figure out where to read control points from
-    debugf("Values %d %.4f\n", seg_idx, t);
     const uint   idx = seg_idx * 3;
     const Vec3 * ptr = control_points.raw();
 
@@ -79,10 +78,16 @@ const jam::Point jam::BezierTrack::Iterator::operator*() const
 jam::BezierTrack::Iterator& jam::BezierTrack::Iterator::operator++() 
 {
   p += 10;
-  // Have we passed the last segment?
-  if (p >= trackData->segment_count() * 100)
-  {
-    p = 0;
-  }
   return *this;
 }  
+
+bool jam::BezierTrack::Iterator::end()
+{
+  return *this == trackData->end();
+}
+
+jam::BezierTrack::Iterator& jam::BezierTrack::Iterator::reset()
+{
+  p = 0;
+  return *this;
+}

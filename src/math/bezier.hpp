@@ -160,6 +160,8 @@ namespace jam
             friend bool operator== (const Iterator& a, const Iterator& b) { return a.trackData == b.trackData && a.p == b.p; };
             friend bool operator!= (const Iterator& a, const Iterator& b) { return !(a == b); };  
 
+            bool end();
+            Iterator& reset();
         private:
             BezierTrack* trackData;
             // hundreds place is the segment id

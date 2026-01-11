@@ -1,3 +1,4 @@
+#include "colors.hpp"
 #include "car.hpp"
 #include "joypad.h"
 #include "t3d/t3d.h"
@@ -15,12 +16,6 @@ namespace
     (T3DMat4FP *)malloc_uncached(sizeof(T3DMat4FP)),
     (T3DMat4FP *)malloc_uncached(sizeof(T3DMat4FP))
   };
-  color_t orderColor[4] {
-    {0xFF, 0x00, 0x00, 0xFF},
-    {0x00, 0xFF, 0x00, 0xFF},
-    {0x00, 0x00, 0xFF, 0xFF},
-    {0xFF, 0xFF, 0x00, 0xFF}
-  };
   T3DVec3 corrected {{0.f, 0.f, 0.f}};
   jam::Vec3 currentTrackPoint(0, 0, 0);
   jam::Vec3 currentLocal(0, 0, 0);
@@ -30,6 +25,7 @@ namespace
   T3DQuat spin;
 
   T3DModel* carModel;
+  unsigned short lap = 0;
 }
 
 void print_vec(const char* name, const jam::Vec3& vec, bool buffer = false)
@@ -65,7 +61,7 @@ void car_render(T3DModelState& state) {
   int32_t i = 0;
   while (t3d_model_iter_next(&iter)) {
     iter.object->material->setColorFlags &= 0b110; 
-    rdpq_set_prim_color(RGBA32(orderColor[i % 4].r, orderColor[i % 4].g, orderColor[i % 4].b, orderColor[i % 4].a));
+    rdpq_set_prim_color(RGBA32(COLORS[i % 4].r, COLORS[i % 4].g, COLORS[i % 4].b, COLORS[i % 4].a));
     t3d_model_draw_material(iter.object->material, &state);
     t3d_model_draw_object(iter.object, NULL);
     state = t3d_model_state_create();
@@ -75,7 +71,14 @@ void car_render(T3DModelState& state) {
 }
 
 void car_update(GameStateBook &gameStateHistory, joypad_buttons_t buttons) {
-  // Add our direction to this
+  gamestate_page_t& current = gameStateHistory.back();
+
+  if (lap == 3) {
+    current.phase = Phase::GARAGE;
+    lap = 0;
+    // return early
+    return;
+  }
   jam::Vec3 newPosition = currentLocal;
   if (buttons.a)
   {
@@ -85,13 +88,19 @@ void car_update(GameStateBook &gameStateHistory, joypad_buttons_t buttons) {
     jam::Vec3 expectedDir = currentTrackPoint - currentLocal;
     jam::Vec3 headingDir = newPosition - currentLocal;
     // Model faces (0, 0, 1)
-    float angleToTurn = std::acos(expectedDir.normal().dot({0.f, 0.f, 1.f}));
+    float angleToTurn = std::acos(expectedDir.normal().dot({1.f, 0.f, 0.f}));
     t3d_quat_identity(currentRotation);
     t3d_quat_rotate_euler(currentRotation, (float[3]){0,1.f, 0.f}, angleToTurn);
     if (newPosition == currentTrackPoint)
     {
       // we can skip this one
       ++trackIter;
+      // Have we passed the last segment?
+      if (trackIter.end())
+      {
+        trackIter.reset();
+        lap += 1;
+      }
       currentTrackPoint = (*trackIter).position;
     }
     else
@@ -101,17 +110,17 @@ void car_update(GameStateBook &gameStateHistory, joypad_buttons_t buttons) {
       {
         // We've passed this point
         ++trackIter;
+        // Have we passed the last segment?
+        if (trackIter.end())
+        {
+          trackIter.reset();
+          lap += 1;
+        }
         currentTrackPoint = (*trackIter).position;
       }
     }
     lastDirection = (currentTrackPoint - newPosition).normalize();
   }
-
-  // Check if we should increment iterator
-  // normal = jam::Vec3(0, 0, 0);
-  // corrected = static_cast<T3DVec3>(nextStop.position + normal);
-  // update our history
-  gamestate_page_t& current = gameStateHistory.back();
 
   t3d_quat_identity(spin);
   float pi2 = 3.1415 / 2.f;
