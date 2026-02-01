@@ -9,32 +9,13 @@
 #include <t3d/t3dmodel.h>
 #include <t3d/t3dmath.h>
 
-namespace
-{
-  float speedMagnitude = .05f;
-  T3DMat4FP *loc[2]{
-    (T3DMat4FP *)malloc_uncached(sizeof(T3DMat4FP)),
-    (T3DMat4FP *)malloc_uncached(sizeof(T3DMat4FP))
-  };
-  T3DVec3 corrected {{0.f, 0.f, 0.f}};
-  jam::Vec3 currentTrackPoint(0, 0, 0);
-  jam::Vec3 currentLocal(0, 0, 0);
-  jam::Vec3 lastDirection(0.f, 0.f, 0.f);
-  jam::BezierTrack::Iterator trackIter = nullptr;
-  T3DQuat currentRotation;
-  T3DQuat spin;
-
-  T3DModel* carModel;
-  unsigned short lap = 0;
-}
-
 void print_vec(const char* name, const jam::Vec3& vec, bool buffer = false)
 {
   debugf("= %s: %.4f, %.4f, %.4f =", name, vec.x, vec.y, vec.z);
   if (buffer) debugf("\n");
 }
 
-void car_init(jam::BezierTrack& track)
+Car::Car(jam::BezierTrack& track)
 {
   trackIter = track.begin();
   auto tempIter = track.begin();
@@ -48,7 +29,7 @@ void car_init(jam::BezierTrack& track)
   t3d_quat_identity(currentRotation);
 }
 
-void car_render(T3DModelState& state) {
+void Car::Render(T3DModelState& state) {
   // it.object->material->setColorFlags &= 0b110;
   t3d_mat4fp_from_srt(loc[0], (float[3]){0.1f, 0.1f, 0.1f},
                             currentRotation.v, corrected.v);
@@ -61,7 +42,7 @@ void car_render(T3DModelState& state) {
   int32_t i = 0;
   while (t3d_model_iter_next(&iter)) {
     iter.object->material->setColorFlags &= 0b110; 
-    rdpq_set_prim_color(RGBA32(COLORS[i % 4].r, COLORS[i % 4].g, COLORS[i % 4].b, COLORS[i % 4].a));
+    rdpq_set_prim_color(garageColors[i]);
     t3d_model_draw_material(iter.object->material, &state);
     t3d_model_draw_object(iter.object, NULL);
     state = t3d_model_state_create();
@@ -70,7 +51,12 @@ void car_render(T3DModelState& state) {
   t3d_matrix_pop(2);
 }
 
-void car_update(GameStateBook &gameStateHistory, joypad_buttons_t buttons) {
+void Car::SetColors(int numColors, color_t *colors) {
+  assertf(numColors == numBlocks, "Too many colors have been passed in");
+  garageColors = colors;
+}
+
+void Car::Update(GameStateBook &gameStateHistory, joypad_buttons_t buttons) {
   gamestate_page_t& current = gameStateHistory.back();
 
   if (lap == 3) {
@@ -83,7 +69,7 @@ void car_update(GameStateBook &gameStateHistory, joypad_buttons_t buttons) {
   if (buttons.a)
   {
     // Have we passed the current track point in our current direction
-    auto p = lastDirection * speedMagnitude;
+    auto p = lastDirection * speedMagnitude; // @todo: This is currently ignoring tick delta
     newPosition = currentLocal + p;
     jam::Vec3 expectedDir = currentTrackPoint - currentLocal;
     jam::Vec3 headingDir = newPosition - currentLocal;

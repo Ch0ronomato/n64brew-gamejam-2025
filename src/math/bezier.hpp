@@ -171,5 +171,26 @@ namespace jam
 
         Iterator begin() { return Iterator(this); }
         Iterator end() { return Iterator(this, segment_count() * 100); }
+
+
+        struct PointIterator {
+            using iterator_category = std::forward_iterator_tag;
+            using difference_type = unsigned short;
+
+            PointIterator(BezierTrack* track, size_t p) : trackData(track), currentPoint(p) { }
+            const jam::Vec3 operator*() const { return trackData->control_points[currentPoint]; };
+            PointIterator& operator++() { currentPoint++; return *this; };
+            friend bool operator== (const PointIterator& a, const PointIterator& b) { return a.trackData == b.trackData && a.currentPoint == b.currentPoint; };
+            friend bool operator!= (const PointIterator& a, const PointIterator& b) { return !(a == b); };  
+
+            bool end();
+            Iterator& reset();
+        private:
+            BezierTrack* trackData;
+            size_t currentPoint;
+        };
+
+        PointIterator control_points_begin() { return PointIterator(this, 0); }
+        PointIterator control_points_end() { return PointIterator(this, segment_count()); }
     };
 }

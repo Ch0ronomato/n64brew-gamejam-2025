@@ -161,7 +161,10 @@ int main(void) {
   Phase currentPhase = Phase::GARAGE;
   GameStateBook gameStateHistory;
   gamestatebook_update(gameStateHistory, currentPhase);
-  car_init(bezierTrack);
+  Car* car = new Car(bezierTrack);
+
+  // Setup some colliders for the bezier track points for testing
+  SphereCollider* testCollider = new SphereCollider(*bezierTrack.control_points_begin(), 100.f);
 
   while (true) {
     joypad_poll();
@@ -174,7 +177,7 @@ int main(void) {
     gamestate_page_t& gstate = gamestatebook_update(gameStateHistory, currentPhase);
     gstate.lastXInput = xInput;
     gstate.lastYInput = yInput;
-    car_update(gameStateHistory, held);
+    car->Update(gameStateHistory, held);
     currentPhase = gameStateHistory.back().phase;
     if (currentPhase == Phase::RACE) {
       camera_update(gameStateHistory);
@@ -205,8 +208,9 @@ int main(void) {
           t3d_model_draw_object(it.object, NULL);
         }
       }
+      testCollider->DebugDraw();
       T3DModelState state = t3d_model_state_create();
-      car_render(state);
+      car->Render(state);
 
       rdpq_sync_pipe();
       rdpq_detach_show();
@@ -237,27 +241,20 @@ int main(void) {
         rdpq_set_prim_color(currentColors[i]);
         jam::Vec3 worldTranslation = translationsWorldSpace[i];
         T3DVec3 t = static_cast<T3DVec3>(worldTranslation);
+        T3DQuat rot = (i == currentBlock) ? rotate : (T3DQuat){0.f, 0.f, 0.f, 0.f};  
         t3d_mat4fp_from_srt(scratchFP[i], 
           (float[3]){1.f, 1.f, 1.f}, 
-          (float[4]){0.f, 0.f, 0.f, 0.f},
+          rot.v,
           t.v);
         t3d_matrix_set(scratchFP[i], true);
-        if (i == currentBlock) {
-          // Push the rotation matrix too
-          t3d_matrix_push_pos(1);
-          t3d_matrix_set(garageFP, true);
-        }
         t3d_model_draw(garage);
-        if (i == currentBlock) {
-          // we need to pop the added matrix
-          t3d_matrix_pop(1);
-        }
       }
       t3d_matrix_pop(1); 
       rdpq_sync_pipe();
       rdpq_detach_show();
       if (pressed.start) {
         currentPhase = Phase::RACE;
+        car->SetColors(numBlocks, currentColors);
         continue;
       }
       if (pressed.c_left || pressed.c_right) {
